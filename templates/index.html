@@ -1,153 +1,872 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Stock AI Predictor</title>
-
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>📈 AI Stock Predictor & Analytics Dashboard</title>
+    
+    <!-- Meta tags for recruiter impression -->
+    <meta name="description" content="Resume-grade stock prediction application utilizing Flask, yfinance, Linear Regression, and a pre-trained LSTM Recurrent Neural Network.">
+    <meta name="author" content="Internship Candidate">
 
-    <!-- Bootstrap -->
+    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Google Fonts: Plus Jakarta Sans (Premium Sans-Serif) -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js for interactive visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
+        /* CSS DESIGN SYSTEM VARIABLES */
+        :root {
+            /* Dark Theme Variables (Default) */
+            --bg-primary: #090d16;
+            --bg-secondary: #0f172a;
+            --bg-glass: rgba(15, 23, 42, 0.65);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-primary: #3b82f6; /* Neon Blue */
+            --accent-glow: rgba(59, 130, 246, 0.15);
+            --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        [data-theme="light"] {
+            /* Light Theme Variables */
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-glass: rgba(255, 255, 255, 0.75);
+            --border-color: rgba(0, 0, 0, 0.08);
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --accent-primary: #2563eb;
+            --accent-glow: rgba(37, 99, 235, 0.1);
+            --card-shadow: 0 8px 32px 0 rgba(148, 163, 184, 0.15);
+        }
+
         body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #f4f6f9;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
+            min-height: 100vh;
+            overflow-x: hidden;
         }
 
-        .navbar {
-            background-color: #0d6efd;
+        /* Ambient background glow dots (Premium Aesthetics) */
+        .ambient-glow {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--accent-glow) 0%, rgba(0,0,0,0) 70%);
+            z-index: -1;
+            filter: blur(40px);
+            pointer-events: none;
+        }
+        .glow-1 { top: 10%; right: 10%; }
+        .glow-2 { bottom: 20%; left: 5%; }
+
+        /* Glassmorphism Cards */
+        .glass-card {
+            background: var(--bg-glass);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            transition: transform 0.2s ease, border-color 0.2s ease;
         }
 
-        .navbar-brand {
+        .hover-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-primary);
+        }
+
+        /* Sleek Input Fields */
+        .custom-input {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 10px;
+            padding: 10px 14px;
+            transition: all 0.2s ease;
+        }
+        [data-theme="light"] .custom-input {
+            background: rgba(255, 255, 255, 0.9);
+        }
+        .custom-input:focus {
+            background: rgba(0, 0, 0, 0.3);
+            border-color: var(--accent-primary);
+            color: var(--text-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+            outline: none;
+        }
+
+        /* Navigation Header */
+        .navbar-custom {
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 0;
+            background: var(--bg-glass);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+
+        /* Buttons */
+        .btn-gradient {
+            background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
             color: white;
-            font-weight: bold;
+            border: none;
+            font-weight: 600;
+            border-radius: 10px;
+            padding: 10px 20px;
+            transition: opacity 0.2s;
+        }
+        .btn-gradient:hover {
+            opacity: 0.9;
+            color: white;
         }
 
-        .card {
-            border-radius: 12px;
+        /* Table custom scrollbar */
+        .table-responsive::-webkit-scrollbar {
+            height: 6px;
+        }
+        .table-responsive::-webkit-scrollbar-thumb {
+            background-color: var(--border-color);
+            border-radius: 4px;
         }
 
-        .prediction-box {
-            font-size: 22px;
-            font-weight: bold;
+        /* Color badges */
+        .badge-gain {
+            background-color: rgba(16, 185, 129, 0.15) !important;
+            color: #10b981 !important;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .badge-loss {
+            background-color: rgba(239, 68, 68, 0.15) !important;
+            color: #ef4444 !important;
+            border: 1px solid rgba(239, 68, 68, 0.3);
         }
 
-        button.card:hover {
-            transform: scale(1.03);
-            transition: 0.2s;
+        /* Watchlist list-group */
+        .watchlist-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            transition: background 0.2s;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+        .watchlist-item:hover {
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--accent-primary);
+        }
+        [data-theme="light"] .watchlist-item:hover {
+            background: rgba(0, 0, 0, 0.02);
+        }
+        
+        .watchlist-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Chart Canvas Size */
+        .chart-container {
+            position: relative;
+            height: 380px;
+            width: 100%;
+        }
+
+        /* Floating star button */
+        .btn-watchlist-toggle {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: #eab308; /* Gold Star */
+            border-radius: 50%;
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .btn-watchlist-toggle:hover {
+            transform: scale(1.1);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* News Cards style */
+        .news-card {
+            border-left: 4px solid var(--accent-primary) !important;
         }
     </style>
 </head>
-
 <body>
 
-<!-- NAVBAR -->
-<nav class="navbar">
-    <div class="container">
-        <span class="navbar-brand">📈 AI Investment Predictor</span>
-    </div>
-</nav>
+    <!-- Ambient background glows -->
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
 
-<div class="container mt-5">
+    <!-- Sleek Navigation Bar -->
+    <nav class="navbar navbar-custom sticky-top mb-4">
+        <div class="container d-flex justify-content-between align-items-center">
+            <a href="/" class="navbar-brand fw-bold text-decoration-none d-flex align-items-center gap-2" style="color: var(--text-primary);">
+                <span class="fs-3">📈</span>
+                <span class="fs-4">AI Investment Predictor</span>
+            </a>
+            
+            <div class="d-flex align-items-center gap-3">
+                <!-- Theme Toggle Switch -->
+                <button onclick="toggleTheme()" class="btn btn-sm btn-outline-secondary rounded-pill px-3" id="themeTogglerBtn">
+                    <i class="bi bi-moon-stars-fill me-1"></i> Dark Mode
+                </button>
+            </div>
+        </div>
+    </nav>
 
-    <!-- 🔍 SEARCH -->
-    <div class="card p-4 shadow-sm mb-4">
-        <form method="POST" class="d-flex gap-2">
-            <input type="text" name="symbol" class="form-control" placeholder="Search here..." required>
-            <button class="btn btn-primary">Analyze</button>
-        </form>
-    </div>
+    <div class="container pb-5">
+        
+        <!-- Error Alerts -->
+        {% if error_msg %}
+        <div class="alert alert-danger glass-card d-flex align-items-center gap-2 mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+            <div>{{ error_msg }}</div>
+        </div>
+        {% endif %}
 
-    <!-- 🔥 TOP STOCKS -->
-    <h4 class="mb-3">🔥 Top Stocks</h4>
-    <div class="row">
+        <!-- Main Grid Layout -->
+        <div class="row g-4">
+            
+            <!-- LEFT SIDEBAR: Search, Watchlist, Trending -->
+            <div class="col-lg-4 col-xl-3">
+                <div class="d-flex flex-column gap-4">
+                    
+                    <!-- Search Widget -->
+                    <div class="glass-card p-4">
+                        <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                            <i class="bi bi-search text-primary"></i> Analyze Stock
+                        </h5>
+                        <form method="POST" action="/">
+                            <div class="mb-3">
+                                <label class="form-label text-muted small">Ticker Symbol</label>
+                                <input type="text" name="symbol" class="form-control custom-input" placeholder="e.g. AAPL, TSLA, MSFT" value="{{ symbol or '' }}" required style="text-transform: uppercase;">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label text-muted small">Historical Timeline</label>
+                                <select name="period" class="form-select custom-input">
+                                    <option value="1mo" {% if period == '1mo' %}selected{% endif %}>1 Month</option>
+                                    <option value="3mo" {% if period == '3mo' %}selected{% endif %}>3 Months</option>
+                                    <option value="6mo" {% if period == '6mo' %}selected{% endif %}>6 Months</option>
+                                    <option value="1y" {% if period == '1y' %}selected{% endif %}>1 Year (Default)</option>
+                                    <option value="2y" {% if period == '2y' %}selected{% endif %}>2 Years</option>
+                                    <option value="5y" {% if period == '5y' %}selected{% endif %}>5 Years</option>
+                                </select>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-gradient w-100 py-2.5">
+                                <i class="bi bi-graph-up-arrow me-1"></i> Run Analytics
+                            </button>
+                        </form>
+                    </div>
 
-        {% for stock in top_stocks %}
-        <div class="col-md-4 mb-3">
+                    <!-- Watchlist Widget (Saves to client LocalStorage) -->
+                    <div class="glass-card p-4">
+                        <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                            <i class="bi bi-bookmark-star text-warning"></i> My Watchlist
+                        </h5>
+                        <div class="list-group rounded-3 overflow-hidden border border-secondary" id="watchlistContainer" style="max-height: 250px; overflow-y: auto;">
+                            <!-- Populate dynamically via JS -->
+                            <div class="p-3 text-center text-muted small" id="watchlistEmptyState">
+                                No watchlisted stocks. Click the star icon on any stock details view to save it.
+                            </div>
+                        </div>
+                    </div>
 
-            <form method="POST">
-                <input type="hidden" name="symbol" value="{{ stock.symbol }}">
+                    <!-- Trending Stocks Cache Widget (Demonstrates caching feature) -->
+                    <div class="glass-card p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                                <i class="bi bi-fire text-danger"></i> Trending
+                            </h5>
+                            <span class="badge bg-secondary-subtle text-muted small" style="font-size: 0.65rem;" title="Avoids Yahoo Finance API blocks by keeping stock prices loaded in-memory.">Cached</span>
+                        </div>
+                        <div class="d-flex flex-column gap-2">
+                            {% for stock in top_stocks %}
+                            <a href="/?symbol={{ stock.symbol }}" class="text-decoration-none glass-card p-3 hover-card d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="fw-bold d-block text-primary">{{ stock.symbol }}</span>
+                                    <small class="text-muted" style="font-size: 0.7rem;">{{ stock.name }}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="fw-bold d-block">{{ stock.currency_symbol }}{{ stock.price }}</span>
+                                    {% if stock.change >= 0 %}
+                                        <span class="badge badge-gain font-monospace" style="font-size: 0.75rem;">+{{ stock.percent }}%</span>
+                                    {% else %}
+                                        <span class="badge badge-loss font-monospace" style="font-size: 0.75rem;">{{ stock.percent }}%</span>
+                                    {% endif %}
+                                </div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
 
-                <button class="card p-3 shadow-sm text-center w-100" style="border:none; background:none;">
+                </div>
+            </div>
 
-                    <h5>{{ stock.symbol }}</h5>
-                    <h4>₹ {{ stock.price }}</h4>
+            <!-- MAIN CONTAINER: Charts, Predictions, Fundamentals, News -->
+            <div class="col-lg-8 col-xl-9">
+                <div class="d-flex flex-column gap-4">
+                    
+                    {% if symbol %}
+                    <!-- 1. Stock Identity Title Section -->
+                    <div class="glass-card p-4 d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="d-flex align-items-center gap-2">
+                                <h2 class="fw-extrabold mb-1" id="companyTitleName">{{ company_name }}</h2>
+                                <span class="badge bg-secondary rounded-pill px-2.5">{{ symbol }}</span>
+                            </div>
+                            <p class="text-muted mb-0 small">
+                                <span class="me-3"><i class="bi bi-briefcase me-1"></i>Sector: {{ sector }}</span>
+                                <span><i class="bi bi-tags me-1"></i>Industry: {{ industry }}</span>
+                            </p>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="text-end">
+                                <h3 class="fw-bold mb-0">{{ currency_symbol }}{{ current_price }}</h3>
+                                {% if change >= 0 %}
+                                    <span class="badge badge-gain fs-6 font-monospace">+{{ change }} (+{{ percent_change }}%) <i class="bi bi-arrow-up-right"></i></span>
+                                {% else %}
+                                    <span class="badge badge-loss fs-6 font-monospace">{{ change }} ({{ percent_change }}%) <i class="bi bi-arrow-down-left"></i></span>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Watchlist star toggle -->
+                            <button onclick="toggleWatchlist('{{ symbol }}')" class="btn-watchlist-toggle" id="watchlistToggleBtn" title="Pin stock to your sidebar watchlist">
+                                <i class="bi bi-star" id="watchlistStarIcon"></i>
+                            </button>
+                        </div>
+                    </div>
 
-                    {% if stock.change >= 0 %}
-                        <p class="text-success">
-                            +{{ stock.change }} ({{ stock.percent }}%) 🔼
+                    <!-- 2. Charts Section -->
+                    <div class="glass-card p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <h5 class="fw-bold mb-0"><i class="bi bi-pie-chart text-info"></i> Performance Chart</h5>
+                            
+                            <!-- Toggleable Series Overlays -->
+                            <div class="d-flex gap-2">
+                                <div class="form-check form-switch bg-dark-subtle px-3 py-1 rounded-pill border border-secondary">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="toggleMA20" checked onchange="updateChartOverlays()">
+                                    <label class="form-check-label text-muted small" for="toggleMA20">MA20</label>
+                                </div>
+                                <div class="form-check form-switch bg-dark-subtle px-3 py-1 rounded-pill border border-secondary">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="toggleMA50" onchange="updateChartOverlays()">
+                                    <label class="form-check-label text-muted small" for="toggleMA50">MA50</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Main Canvas for Chart.js Line Chart -->
+                        <div class="chart-container">
+                            <canvas id="interactiveStockChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- 3. Dual AI Predictions Panel -->
+                    <div>
+                        <h4 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                            <i class="bi bi-robot text-purple"></i> Predictive Analysis Models
+                        </h4>
+                        <div class="row g-4">
+                            
+                            <!-- Model A: Linear Regression -->
+                            <div class="col-md-6">
+                                <div class="glass-card p-4 h-100 hover-card">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div>
+                                            <span class="text-muted small d-block">MODEL A</span>
+                                            <h5 class="fw-bold text-primary mb-0">Linear Regression</h5>
+                                        </div>
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 rounded">Statistical Baseline</span>
+                                    </div>
+                                    <hr class="border-secondary my-2">
+                                    <p class="text-muted small">Fits a linear slope on close prices. Best for tracking baseline directionality.</p>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mt-4">
+                                        <div>
+                                            <span class="text-muted small d-block">NEXT CLOSE (EST.)</span>
+                                            <h4 class="fw-bold mb-0 text-white-50">{{ currency_symbol }}{{ predicted_price_lr }}</h4>
+                                        </div>
+                                        <div>
+                                            <span class="text-muted small d-block text-end">SUGGESTION</span>
+                                            {% if "BUY" in suggestion_lr %}
+                                                <span class="badge badge-gain fs-5 px-3 py-1">{{ suggestion_lr }}</span>
+                                            {% else %}
+                                                <span class="badge badge-loss fs-5 px-3 py-1">{{ suggestion_lr }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Model B: LSTM Deep Learning Model -->
+                            <div class="col-md-6">
+                                <div class="glass-card p-4 h-100 hover-card">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div>
+                                            <span class="text-muted small d-block">MODEL B</span>
+                                            <h5 class="fw-bold text-warning mb-0">LSTM Neural Network</h5>
+                                        </div>
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1 rounded">Deep Learning</span>
+                                    </div>
+                                    <hr class="border-secondary my-2">
+                                    <p class="text-muted small">Recurrent Neural Network (RNN) capturing temporal sequence patterns from the last 60 days.</p>
+                                    
+                                    {% if lstm_error_msg %}
+                                    <div class="bg-secondary-subtle border border-secondary text-muted rounded p-3 mt-3 small">
+                                        <i class="bi bi-info-circle-fill me-1"></i> {{ lstm_error_msg }}
+                                    </div>
+                                    {% else %}
+                                    <div class="d-flex justify-content-between align-items-center mt-4">
+                                        <div>
+                                            <span class="text-muted small d-block">NEXT CLOSE (EST.)</span>
+                                            <h4 class="fw-bold mb-0 text-white-50">{{ currency_symbol }}{{ predicted_price_lstm }}</h4>
+                                        </div>
+                                        <div>
+                                            <span class="text-muted small d-block text-end">SUGGESTION</span>
+                                            {% if "BUY" in suggestion_lstm %}
+                                                <span class="badge badge-gain fs-5 px-3 py-1">{{ suggestion_lstm }}</span>
+                                            {% else %}
+                                                <span class="badge badge-loss fs-5 px-3 py-1">{{ suggestion_lstm }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. Key Fundamentals Section -->
+                    <div class="glass-card p-4">
+                        <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                            <i class="bi bi-briefcase text-success"></i> Market Fundamentals
+                        </h5>
+                        <div class="row row-cols-2 row-cols-md-4 g-3">
+                            
+                            <!-- MCAP -->
+                            <div class="col">
+                                <div class="p-3 border border-secondary rounded-3 text-center h-100 bg-secondary-subtle">
+                                    <span class="text-muted small d-block text-uppercase">Market Cap</span>
+                                    <strong class="fs-5 mt-1 d-block text-white-50">{{ market_cap }}</strong>
+                                </div>
+                            </div>
+                            
+                            <!-- P/E -->
+                            <div class="col">
+                                <div class="p-3 border border-secondary rounded-3 text-center h-100 bg-secondary-subtle">
+                                    <span class="text-muted small d-block text-uppercase">P/E Ratio</span>
+                                    <strong class="fs-5 mt-1 d-block text-white-50">{{ pe_ratio }}</strong>
+                                </div>
+                            </div>
+                            
+                            <!-- Div Yield -->
+                            <div class="col">
+                                <div class="p-3 border border-secondary rounded-3 text-center h-100 bg-secondary-subtle">
+                                    <span class="text-muted small d-block text-uppercase">Div Yield</span>
+                                    <strong class="fs-5 mt-1 d-block text-white-50">{{ dividend_yield }}</strong>
+                                </div>
+                            </div>
+                            
+                            <!-- Open Price -->
+                            <div class="col">
+                                <div class="p-3 border border-secondary rounded-3 text-center h-100 bg-secondary-subtle">
+                                    <span class="text-muted small d-block text-uppercase">Open Price</span>
+                                    <strong class="fs-5 mt-1 d-block text-white-50">{{ currency_symbol }}{{ day_open }}</strong>
+                                </div>
+                            </div>
+
+                            <!-- 52W High -->
+                            <div class="col">
+                                <div class="p-3 border border-secondary rounded-3 text-center h-100 bg-secondary-subtle">
+                                    <span class="text-muted small d-block text-uppercase">52W High</span>
+                                    <strong class="fs-5 mt-1 d-block text-white-50 text-success">{{ currency_symbol }}{{ fifty_two_week_high }}</strong>
+                                </div>
+                            </div>
+
+                            <!-- 52W Low -->
+                            <div class="col">
+                                <div class="p-3 border border-secondary rounded-3 text-center h-100 bg-secondary-subtle">
+                                    <span class="text-muted small d-block text-uppercase">52W Low</span>
+                                    <strong class="fs-5 mt-1 d-block text-white-50 text-danger">{{ currency_symbol }}{{ fifty_two_week_low }}</strong>
+                                </div>
+                            </div>
+
+                            <!-- Today Volume -->
+                            <div class="col">
+                                <div class="p-3 border border-secondary rounded-3 text-center h-100 bg-secondary-subtle">
+                                    <span class="text-muted small d-block text-uppercase">Volume</span>
+                                    <strong class="fs-6 mt-2 d-block text-white-50">{{ volume }}</strong>
+                                </div>
+                            </div>
+
+                            <!-- Avg Volume -->
+                            <div class="col">
+                                <div class="p-3 border border-secondary rounded-3 text-center h-100 bg-secondary-subtle">
+                                    <span class="text-muted small d-block text-uppercase">Avg Volume</span>
+                                    <strong class="fs-6 mt-2 d-block text-white-50">{{ avg_volume }}</strong>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- 5. Profile Description -->
+                    <div class="glass-card p-4">
+                        <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                            <i class="bi bi-info-circle text-primary"></i> Company Summary
+                        </h5>
+                        <p class="text-muted small mb-0" style="line-height: 1.6;">
+                            {{ description }}
                         </p>
+                    </div>
+
+                    <!-- 6. Real-Time News Stream -->
+                    <div class="glass-card p-4">
+                        <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                            <i class="bi bi-newspaper text-warning"></i> Latest Market News Feed
+                        </h5>
+                        <div class="d-flex flex-column gap-3">
+                            {% if news_articles %}
+                                {% for article in news_articles %}
+                                <div class="p-3 border border-secondary bg-secondary-subtle rounded-3 news-card">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-primary small fw-semibold">{{ article.publisher }}</span>
+                                        <span class="text-muted small">{{ article.date }}</span>
+                                    </div>
+                                    <h6 class="fw-bold mb-1"><a href="{{ article.url }}" target="_blank" class="text-decoration-none text-white-50 hover-text-primary">{{ article.title }}</a></h6>
+                                    <p class="text-muted small mb-0">{{ article.summary | truncate(160) }}</p>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="p-3 text-center text-muted small">No news articles found for this ticker.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- 7. Collapsible Historical Data Table -->
+                    <div class="glass-card p-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                                <i class="bi bi-table text-muted"></i> Raw Market History Table
+                            </h5>
+                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#tableCollapse" aria-expanded="false">
+                                Toggle Data Table
+                            </button>
+                        </div>
+                        <div class="collapse mt-3" id="tableCollapse">
+                            <div class="table-responsive rounded-3 overflow-hidden border border-secondary">
+                                {{ data_html | safe }}
+                            </div>
+                        </div>
+                    </div>
+
                     {% else %}
-                        <p class="text-danger">
-                            {{ stock.change }} ({{ stock.percent }}%) 🔽
-                        </p>
+                    <!-- Welcome screen (Fallback/Security layer) -->
+                    <div class="glass-card p-5 text-center my-5">
+                        <span style="font-size: 4rem;">📈</span>
+                        <h2 class="fw-bold mt-3">Welcome to AI Stock Predictor</h2>
+                        <p class="text-muted">Enter a ticker symbol (e.g. AAPL, MSFT, TSLA) in the left panel to execute real-time forecasting and analytical charts.</p>
+                    </div>
                     {% endif %}
 
-                </button>
-            </form>
+                </div>
+            </div>
 
         </div>
-        {% endfor %}
-
     </div>
 
-    <!-- 💰 LIVE PRICE -->
-    {% if current_price %}
-    <div class="card p-4 shadow-sm mb-4 text-center">
-        <h4>💰 Live Price</h4>
-        <h2>₹ {{ current_price }}</h2>
+    <!-- ML Explainer Modal Removed -->
 
-        {% if change >= 0 %}
-            <p class="text-success fs-5">
-                +{{ change }} ({{ percent_change }}%) 🔼
-            </p>
-        {% else %}
-            <p class="text-danger fs-5">
-                {{ change }} ({{ percent_change }}%) 🔽
-            </p>
+    <!-- Bootstrap Bundle with Popper JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- FRONTEND SCRIPT: Interactive Charting & State Management -->
+    <script>
+        // Parse python JSON chart data passed safely from flask
+        let rawChartData = null;
+        {% if chart_data_json %}
+            rawChartData = {{ chart_data_json | safe }};
         {% endif %}
-    </div>
-    {% endif %}
 
-    <!-- 📊 DATA -->
-    {% if data %}
-    <div class="card p-4 shadow-sm mb-4">
-        <h4>📊 Stock Data</h4>
-        <div class="table-responsive">
-            {{ data | safe }}
-        </div>
-    </div>
-    {% endif %}
+        let stockChartInstance = null;
 
-    <!-- 📉 GRAPH -->
-    {% if graph %}
-    <div class="card p-4 shadow-sm mb-4 text-center">
-        <h4>📉 Price Trend</h4>
-        <img src="{{ url_for('static', filename='plot.png') }}" class="img-fluid">
-    </div>
-    {% endif %}
+        // Initialize theme state on load
+        document.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            initWatchlistUI();
+            if (rawChartData) {
+                renderInteractiveChart(rawChartData);
+            }
+        });
 
-    <!-- 🤖 PREDICTION -->
-    {% if predicted_price %}
-    <div class="card p-4 shadow-sm text-center">
-        <h4>🤖 AI Prediction</h4>
+        // THEME CONTROLLER
+        function initTheme() {
+            const currentTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            updateThemeButton(currentTheme);
+        }
 
-        <p class="prediction-box">
-            Next Price: ₹ {{ predicted_price }}
-        </p>
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeButton(newTheme);
+            
+            // Re-render chart to adjust color axes according to theme
+            if (rawChartData) {
+                renderInteractiveChart(rawChartData);
+            }
+        }
 
-        {% if "BUY" in suggestion %}
-            <p class="text-success fs-4">{{ suggestion }}</p>
-        {% else %}
-            <p class="text-danger fs-4">{{ suggestion }}</p>
-        {% endif %}
-    </div>
-    {% endif %}
+        function updateThemeButton(theme) {
+            const btn = document.getElementById('themeTogglerBtn');
+            if (theme === 'dark') {
+                btn.innerHTML = '<i class="bi bi-sun-fill me-1 text-warning"></i> Light Mode';
+            } else {
+                btn.innerHTML = '<i class="bi bi-moon-stars-fill me-1 text-primary"></i> Dark Mode';
+            }
+        }
 
-</div>
+        // CHART.JS RENDERING ENGINE
+        function renderInteractiveChart(data) {
+            const ctx = document.getElementById('interactiveStockChart').getContext('2d');
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            
+            // Theme-dependent colors
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+            const labelColor = isDark ? '#94a3b8' : '#64748b';
+            
+            // If chart exists, destroy it before rendering a new one (prevents overlay issues)
+            if (stockChartInstance) {
+                stockChartInstance.destroy();
+            }
 
+            // Create gradient fill for price area
+            const priceGradient = ctx.createLinearGradient(0, 0, 0, 300);
+            priceGradient.addColorStop(0, 'rgba(59, 130, 246, 0.25)');
+            priceGradient.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
+
+            // Prepare datasets based on checkboxes
+            const showMA20 = document.getElementById('toggleMA20').checked;
+            const showMA50 = document.getElementById('toggleMA50').checked;
+
+            const datasets = [
+                {
+                    label: 'Close Price',
+                    data: data.close,
+                    borderColor: '#3b82f6',
+                    borderWidth: 2.5,
+                    backgroundColor: priceGradient,
+                    fill: true,
+                    tension: 0.1,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    yAxisID: 'y'
+                }
+            ];
+
+            if (showMA20) {
+                datasets.push({
+                    label: '20-Day moving average (MA20)',
+                    data: data.ma20,
+                    borderColor: '#f59e0b',
+                    borderWidth: 1.5,
+                    borderDash: [5, 5],
+                    fill: false,
+                    tension: 0.1,
+                    pointRadius: 0,
+                    pointHoverRadius: 0,
+                    yAxisID: 'y'
+                });
+            }
+
+            if (showMA50) {
+                datasets.push({
+                    label: '50-Day moving average (MA50)',
+                    data: data.ma50,
+                    borderColor: '#ec4899',
+                    borderWidth: 1.5,
+                    borderDash: [3, 3],
+                    fill: false,
+                    tension: 0.1,
+                    pointRadius: 0,
+                    pointHoverRadius: 0,
+                    yAxisID: 'y'
+                });
+            }
+
+            stockChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.dates,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: {
+                                color: labelColor,
+                                font: {
+                                    family: 'Plus Jakarta Sans',
+                                    size: 11
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                            titleColor: isDark ? '#f8fafc' : '#0f172a',
+                            bodyColor: isDark ? '#f8fafc' : '#0f172a',
+                            borderColor: '#3b82f6',
+                            borderWidth: 1,
+                            padding: 10,
+                            titleFont: { family: 'Plus Jakarta Sans', weight: 'bold' },
+                            bodyFont: { family: 'Plus Jakarta Sans' },
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += new Intl.NumberFormat('en-US', { style: 'currency', currency: '{{ currency_symbol }}' === '₹' ? 'INR' : 'USD' }).format(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: labelColor,
+                                font: { family: 'Plus Jakarta Sans', size: 10 },
+                                maxTicksLimit: 8
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: gridColor
+                            },
+                            ticks: {
+                                color: labelColor,
+                                font: { family: 'Plus Jakarta Sans', size: 10 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Live Toggle event handler for Moving Average checkboxes
+        function updateChartOverlays() {
+            if (rawChartData) {
+                renderInteractiveChart(rawChartData);
+            }
+        }
+
+        // STATE: WATCHLIST ENGINE (Uses LocalStorage)
+        const WATCHLIST_KEY = 'intern_portfolio_watchlist';
+
+        function getWatchlist() {
+            const list = localStorage.getItem(WATCHLIST_KEY);
+            return list ? JSON.parse(list) : [];
+        }
+
+        function setWatchlist(list) {
+            localStorage.setItem(WATCHLIST_KEY, JSON.stringify(list));
+        }
+
+        function initWatchlistUI() {
+            const list = getWatchlist();
+            const container = document.getElementById('watchlistContainer');
+            const emptyState = document.getElementById('watchlistEmptyState');
+            const activeSymbol = '{{ symbol }}';
+
+            // Clear dynamic elements
+            const items = container.querySelectorAll('.watchlist-item');
+            items.forEach(el => el.remove());
+
+            if (list.length === 0) {
+                emptyState.style.display = 'block';
+            } else {
+                emptyState.style.display = 'none';
+                list.forEach(sym => {
+                    const item = document.createElement('a');
+                    item.href = `/?symbol=${sym}`;
+                    item.className = 'watchlist-item';
+                    item.innerHTML = `
+                        <span class="fw-bold">${sym}</span>
+                        <button onclick="event.preventDefault(); removeFromWatchlist('${sym}')" class="btn btn-sm btn-link text-danger p-0 border-0" title="Delete from watchlist">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    `;
+                    container.appendChild(item);
+                });
+            }
+
+            // Update details view star state
+            if (activeSymbol) {
+                const isSaved = list.includes(activeSymbol);
+                const starIcon = document.getElementById('watchlistStarIcon');
+                const btn = document.getElementById('watchlistToggleBtn');
+                
+                if (isSaved) {
+                    starIcon.className = 'bi bi-star-fill text-warning';
+                    btn.title = 'Saved to watchlist';
+                } else {
+                    starIcon.className = 'bi bi-star text-muted';
+                    btn.title = 'Pin to watchlist';
+                }
+            }
+        }
+
+        function toggleWatchlist(sym) {
+            if (!sym) return;
+            const list = getWatchlist();
+            const idx = list.indexOf(sym);
+            if (idx === -1) {
+                list.push(sym);
+            } else {
+                list.splice(idx, 1);
+            }
+            setWatchlist(list);
+            initWatchlistUI();
+        }
+
+        function removeFromWatchlist(sym) {
+            const list = getWatchlist();
+            const idx = list.indexOf(sym);
+            if (idx !== -1) {
+                list.splice(idx, 1);
+                setWatchlist(list);
+                initWatchlistUI();
+            }
+        }
+    </script>
 </body>
 </html>
